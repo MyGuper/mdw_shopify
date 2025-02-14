@@ -1,0 +1,39 @@
+<script>
+  const url = window.location.href
+  if(url.includes("cart")){
+    const cartData = {{ cart | json }}
+    const customer ={
+      id: {{ customer.id }},
+      name: {{ customer.name }},
+      email: {{ customer.email }}
+    }
+    const storeName = Shopify.shop
+    const cartItems = cartData?.cartData?.items.map(item=>({ name: item.title, quantity:item.quantity, price: item.price }))
+    const domain = "https://delivers-console-reserves-paintball.trycloudflare.com"
+    const url = `${domain}/api/getRewardByOrder`
+    fetch('https://example.com/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        data: {
+          shop: storeName,
+          items: cartItems,
+          customer
+        }
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        
+      })
+      .catch((err) => console.log(err));
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Loyalty Rewards",
+  "target": "body"
+}
+{% endschema %}
+
