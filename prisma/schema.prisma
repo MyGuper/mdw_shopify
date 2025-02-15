@@ -9,8 +9,8 @@ generator client {
 // enough when changing adapters.
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
 }
 
 model Session {
@@ -32,7 +32,7 @@ model Session {
 }
 
 model Guper_session {
-  id          String  @id
+  id          Int     @id @default(autoincrement())
   shop        String  @unique
   accessToken String?
   expired_at  String?

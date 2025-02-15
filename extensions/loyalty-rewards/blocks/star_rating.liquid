@@ -1,32 +1,55 @@
 <script>
-  const url = window.location.href
-  if(url.includes("cart")){
-    const cartData = {{ cart | json }}
-    const customer ={
-      id: {{ customer.id }},
-      name: {{ customer.name }},
-      email: {{ customer.email }}
-    }
-    const storeName = Shopify.shop
-    const cartItems = cartData?.cartData?.items.map(item=>({ name: item.title, quantity:item.quantity, price: item.price }))
-    const domain = "https://delivers-console-reserves-paintball.trycloudflare.com"
-    const url = `${domain}/api/getRewardByOrder`
-    fetch('https://example.com/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  // Only run on the cart page
+  const currentUrl = window.location.href;
+  if (currentUrl.includes("cart")) {
+    // Get the cart data (assumes the cart object is output with a proper JSON structure)
+    const cartData = {{ cart | json }};
+    
+    // Assuming the cart JSON includes an "items" array directly
+    const cartItems = cartData.items.map(item => ({
+      skuRefId: item.id,
+      name: item.title,
+      quantity: item.quantity,
+      price: item.price
+    }));
+    
+    // Get customer information (Liquid variables)
+    const customer = {
+      id: "{{ customer.id }}",
+      name: "{{ customer.name }}",
+      email: "{{ customer.email }}"
+    };
+    
+    // Get store information. Make sure shop.id is available in your Liquid context.
+    const store = {
+      name: Shopify.shop,
+      id: {{ shop.id }}
+    };
+    
+    // Domain of your API endpoint
+    const domain = "https://hygiene-retrieval-implications-retained.trycloudflare.com";
+    const apiUrl = `${domain}/api/getRewardByOrder`;
+    
+    // Send the POST request with the cart, customer, and store info
+    fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         data: {
-          shop: storeName,
+          shop: store,
           items: cartItems,
-          customer
+          customer: customer
         }
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        
       })
-      .catch((err) => console.log(err));
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Reward Response:", data);
+        // You can handle the response further as needed
+      })
+      .catch(err => console.error("Error fetching rewards:", err));
   }
 </script>
 
@@ -36,4 +59,3 @@
   "target": "body"
 }
 {% endschema %}
-
