@@ -56,8 +56,23 @@ async function getRewardInfo(
   }
 }
 
+// export const loader = async ({request})=>{
+
+// }
 // Remix action to handle the incoming POST request
 export const action = async ({ request }) => {
+  console.log(1);
+  // if (request.method === "OPTIONS") {
+  //   return new Response(null, {
+  //     status: 204,
+  //     headers: {
+  //       "Access-Control-Allow-Origin": "*",
+  //       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  //       "Access-Control-Allow-Headers": "*",
+  //     },
+  //   });
+  // }
+
   try {
     // Await the request JSON data
     const { data } = await request.json();
@@ -82,7 +97,6 @@ export const action = async ({ request }) => {
       new Date(guperSession.expired_at).getTime() < Date.now()
     ) {
       const newSession = await createNewSession();
-      console.log("Authorizing", newSession);
       // const newExpiry = Date.now(); // Convert expiresIn (in seconds) to milliseconds
 
       if (guperSession) {
@@ -109,8 +123,6 @@ export const action = async ({ request }) => {
       accessToken = guperSession.accessToken;
     }
 
-    console.log(accessToken);
-
     // Get the reward information from the Guper API
     const reward = await getRewardInfo(
       guper_interface,
@@ -120,21 +132,23 @@ export const action = async ({ request }) => {
       accessToken,
     );
 
-    console.log("Reward Info:", reward);
-
     // Return the reward data as a JSON response
-    return json(
+    return Response.json(
       { success: "Data fetched successfully", reward },
+      {
+        headers: {
+          "Access-Control-Allow-Origin": "*"
+        },
+      },
+    );
+  } catch (error) {
+    return Response.json(
+      { error: "error fetching Data", errorMsg: error },
       {
         headers: {
           "Access-Control-Allow-Origin": "*",
         },
       },
-    );
-  } catch (error) {
-    return json(
-      { error: "error fetching Data", error },
-      { headers: { "Access-Control-Allow-Origin": "*" } },
     );
   }
 };

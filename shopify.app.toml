@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "ba9121cd1d34a9593db9295900ea8056"
-application_url = "https://hygiene-retrieval-implications-retained.trycloudflare.com"
+application_url = "https://cayman-mega-white-britney.trycloudflare.com"
 embedded = true
 name = "Guper Loyalty Rewards"
 handle = "guper-loyalty-rewards-1"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://hygiene-retrieval-implications-retained.trycloudflare.com/auth/callback",
-  "https://hygiene-retrieval-implications-retained.trycloudflare.com/auth/shopify/callback",
-  "https://hygiene-retrieval-implications-retained.trycloudflare.com/api/auth/callback"
+  "https://cayman-mega-white-britney.trycloudflare.com/auth/callback",
+  "https://cayman-mega-white-britney.trycloudflare.com/auth/shopify/callback",
+  "https://cayman-mega-white-britney.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

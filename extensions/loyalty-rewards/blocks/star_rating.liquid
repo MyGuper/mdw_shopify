@@ -1,55 +1,240 @@
+<style>
+  .modal_overlay {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9;
+    background: rgba(0, 0, 0, 0.52);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(6.2px);
+    -webkit-backdrop-filter: blur(6.2px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .modalContainer {
+    background-color: white;
+    border-radius: 10px;
+    border: 1px solid;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+  }
+  .guper_modal_heading {
+    font-size: 35px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .closeBtn::after{
+    display: none !important;
+  }
+  .closeBtn{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border-radius: 100%;
+    aspect-ratio: 1/1;
+    padding: 20px;
+    border: none;
+  }
+  .modalContainer .heading {
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 40px;
+  }
+  .guperMessage {
+    padding: 10px;
+    padding-bottom: 50px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .action_container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #ccc;
+    border-radius: 0px 0px 10px 10px;
+  }
+  .modalContainer .button {
+    font-size: 12px;
+    min-width: auto;
+    min-height: auto;
+    padding: 5px 10px;
+  }
+  .modalContainer .button {
+    font-size: 12px;
+    min-width: auto;
+    min-height: auto;
+    padding: 5px 10px;
+  }
+  .buttonContainer {
+    display: flex;
+    justify-content: end;
+    padding: 10px;
+    padding-right: 0;
+  }
+</style>
+
 <script>
-  // Only run on the cart page
   const currentUrl = window.location.href;
   if (currentUrl.includes("cart")) {
-    // Get the cart data (assumes the cart object is output with a proper JSON structure)
-    const cartData = {{ cart | json }};
+    const rewardBtn = `<div class="buttonContainer"><button class="button modal_activator" onclick="checkReward()">Reward</button></div>`
+    const cartContainer = document.querySelector("cart-items .page-width")
+    cartContainer.insertAdjacentHTML("afterbegin", rewardBtn)
+
+    function checkReward(){
+      document.querySelector(".modal_activator").innerText = "Loading..."
+      const cartData = {{ cart | json }};
+      
+      const cartItems = cartData.items.map(item => ({
+        skuRefId: item.id,
+        name: item.title,
+        quantity: item.quantity,
+        price: item.price
+      }));
+   
+      const modalBody = `
+        <div class="modal_overlay">
+          <div class="modalContainer">
+            <button class="closeBtn button" aria-label="Close">&times;</button>
+            <div class="heading">
+              <span class="guper_modal_heading">Login!</span>
+            </div>
+            <div class="guper_content_container">
+              <div class="guperMessage">Login to redeem your prize</div>
+              <div class="action_container">
+                <div class="button cancelBtn">Cancel</div>
+                <div class="button button--secondary" onclick="window.location.href='{{ routes.account_login_url }}'">
+                  Login
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // If the customer is not logged in, show the modal
+      if ("{{ customer.id }}" === "") {
+        document.body.insertAdjacentHTML("afterbegin", modalBody);
+        attachModalListeners();
+      } else {
+        // If logged in, then send the reward request
+        const customer = {
+          id: "{{ customer.id }}",
+          name: "{{ customer.name }}",
+          email: "{{ customer.email }}"
+        };
+        let guperSurprise
+        
+        const store = {
+          name: Shopify.shop,
+          id: {{ shop.id }}
+        };
+        
+        const domain = "https://cayman-mega-white-britney.trycloudflare.com";
+        const apiUrl = `${domain}/api/getRewardByOrder`;
+        
+        fetch(apiUrl, {
+          method: "POST",
+          body: JSON.stringify({
+            data: {
+              shop: store,
+              items: cartItems,
+              customer: customer
+            }
+          })
+        })
+          .then(res => res.json())
+          .then(data => {
+            getAwardsDetail(data)
+          })
+          .catch(err => {
+            console.error("Error fetching rewards:", err)
+          });
+      }
+    }
+  }
+  function getAwardsDetail(data){
+    const redeemableRewardTotal = data?.reward?.cashback?.thisOrder?.redeemable?.total
+    const rewardModal = 
+    `
+      <div class="modal_overlay">
+        <div class="modalContainer">
+          <button class="closeBtn button" aria-label="Close">&times;</button>
+          <div class="heading">
+            <span class="guper_modal_heading">${"Redeem your reward"}</span>
+          </div>
+          <div class="guper_content_container">
+            <div class="guperMessage">
+              $${redeemableRewardTotal} Off
+            </div>
+            <div class="action_container">
+              <button class="button cancelBtn">Cancel</button>
+              <button ${redeemableRewardTotal && redeemableRewardTotal > 0 ? "" : "disabled" } class="button button--secondary" onclick="redeemReward(redeemableRewardTotal)">
+                Redeem
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    document.body.insertAdjacentHTML("afterbegin", rewardModal);
+    attachModalListeners()
+    guperSurprise = data
     
-    // Assuming the cart JSON includes an "items" array directly
-    const cartItems = cartData.items.map(item => ({
-      skuRefId: item.id,
-      name: item.title,
-      quantity: item.quantity,
-      price: item.price
-    }));
+  }
+  // Function to attach event listeners to the modal elements
+  function attachModalListeners() {
+    // Function to remove the modal from the DOM
+    function hideModal() {
+      const modal = document.querySelector('.modal_overlay');
+      if (modal) {
+        modal.remove();
+      }
+      document.querySelector(".modal_activator").innerText = "Reward"
+    }
     
-    // Get customer information (Liquid variables)
-    const customer = {
-      id: "{{ customer.id }}",
-      name: "{{ customer.name }}",
-      email: "{{ customer.email }}"
-    };
-    
-    // Get store information. Make sure shop.id is available in your Liquid context.
-    const store = {
-      name: Shopify.shop,
-      id: {{ shop.id }}
-    };
-    
-    // Domain of your API endpoint
-    const domain = "https://hygiene-retrieval-implications-retained.trycloudflare.com";
-    const apiUrl = `${domain}/api/getRewardByOrder`;
-    
-    // Send the POST request with the cart, customer, and store info
-    fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        data: {
-          shop: store,
-          items: cartItems,
-          customer: customer
-        }
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        console.log("Reward Response:", data);
-        // You can handle the response further as needed
-      })
-      .catch(err => console.error("Error fetching rewards:", err));
+    // Attach listeners after the modal has been inserted into the DOM
+    // Use a timeout to ensure elements are available, or call when DOM is ready.
+    setTimeout(function() {
+      const overlay = document.querySelector('.modal_overlay');
+      if (overlay) {
+        // Clicking on the overlay hides the modal.
+        overlay.addEventListener('click', hideModal);
+      }
+      
+      const modalContainer = document.querySelector('.modalContainer');
+      if (modalContainer) {
+        // Stop propagation to prevent clicks inside modal from closing it.
+        modalContainer.addEventListener('click', function(e) {
+          e.stopPropagation();
+        });
+      }
+      
+      const closeBtn = document.querySelector('.closeBtn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          hideModal();
+        });
+      }
+      
+      const cancelBtn = document.querySelector('.cancelBtn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          hideModal();
+        });
+      }
+    }, 0);
   }
 </script>
 
