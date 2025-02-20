@@ -1,7 +1,6 @@
 import { json } from "@remix-run/node";
 import prisma from "../db.server";
 
-// Create a new session with the Guper API
 async function createNewSession() {
   const response = await fetch(
     `https://${process.env.GUPER_ACCOUNT}.myguper.com/api/connect/token`,
@@ -13,18 +12,17 @@ async function createNewSession() {
     },
   );
 
-  // Make sure to await response.json()
   const data = await response.json();
   return { accessToken: data.accessToken, expiresIn: data.expiresIn };
 }
 
-// Fetch the reward info from Guper's loyalty API
 async function getRewardInfo(
   guper_interface,
   shopId,
   client,
   items,
   accessToken,
+  totalItems,
 ) {
   const response = await fetch(
     `https://${process.env.GUPER_ACCOUNT}.myguper.com/api/loyalty/rewardByOrder`,
@@ -39,6 +37,7 @@ async function getRewardInfo(
         storeId: shopId,
         client,
         items,
+        total_item: totalItems,
       }),
     },
   );
@@ -56,51 +55,30 @@ async function getRewardInfo(
   }
 }
 
-// export const loader = async ({request})=>{
-
-// }
-// Remix action to handle the incoming POST request
 export const action = async ({ request }) => {
   console.log(1);
-  // if (request.method === "OPTIONS") {
-  //   return new Response(null, {
-  //     status: 204,
-  //     headers: {
-  //       "Access-Control-Allow-Origin": "*",
-  //       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  //       "Access-Control-Allow-Headers": "*",
-  //     },
-  //   });
-  // }
 
   try {
-    // Await the request JSON data
     const { data } = await request.json();
 
     const { shop, items, customer } = data;
 
-    // Prepare client information using customer's email
     const client = { email: customer.email };
     const guper_interface = process.env.INTERFACE;
     let accessToken;
 
-    // Find an existing session for the store
     let guperSession = await prisma.guper_session.findFirst({
       where: { shop: shop.name },
     });
 
-    // Check if session doesn't exist or is expired.
-    // Assuming guperSession.expired_at is stored as a timestamp.
     if (
       !guperSession ||
       !guperSession.accessToken ||
       new Date(guperSession.expired_at).getTime() < Date.now()
     ) {
       const newSession = await createNewSession();
-      // const newExpiry = Date.now(); // Convert expiresIn (in seconds) to milliseconds
 
       if (guperSession) {
-        // Update existing session
         await prisma.guper_session.update({
           where: { id: guperSession.id },
           data: {
@@ -109,7 +87,6 @@ export const action = async ({ request }) => {
           },
         });
       } else {
-        // Create a new session if one doesn't exist
         guperSession = await prisma.guper_session.create({
           data: {
             shop: shop.name,
@@ -123,21 +100,27 @@ export const action = async ({ request }) => {
       accessToken = guperSession.accessToken;
     }
 
-    // Get the reward information from the Guper API
+    let totalItems = 0;
+
+    items.forEach((item) => {
+      console.log({ item });
+      totalItems = totalItems + Number(item.quantity);
+    });
+    console.log({ totalItems });
     const reward = await getRewardInfo(
       guper_interface,
       shop.id,
       client,
       items,
       accessToken,
+      totalItems,
     );
 
-    // Return the reward data as a JSON response
     return Response.json(
       { success: "Data fetched successfully", reward },
       {
         headers: {
-          "Access-Control-Allow-Origin": "*"
+          "Access-Control-Allow-Origin": "*",
         },
       },
     );
